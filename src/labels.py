@@ -1,10 +1,4 @@
-"""
-Label mappings built from the Week 1 EDA (top labels per repo).
 
-Matching is on EXACT label names (lowercased), not keywords.
-Keyword matching is risky: e.g. "Needs Decision - Include Feature" contains
-"feature" but is not a feature-request label.
-"""
 
 # issue type: exactly one type must match, otherwise the issue is dropped as ambiguous
 TYPE_MAP = {

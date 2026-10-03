@@ -1,21 +1,4 @@
-"""
-Collect GitHub issues (not PRs) using the Search API with date windows.
 
-Why: the plain /issues endpoint refuses page numbers beyond about 100 pages
-(HTTP 422), so it can only reach the newest ~10,000 items (issues AND PRs).
-The Search API returns at most 1000 results per query, so we split time into
-windows and halve any window that has more than 1000 results.
-
-Setup (every new terminal session). This way the token is NOT saved in your history:
-    PowerShell:  $env:GITHUB_TOKEN = Read-Host "Paste token"
-
-Run:
-    python src/collect_issues.py --max-per-repo 8000 --out-dir data/raw_full
-
-Output:
-    <out-dir>/<owner>__<repo>.jsonl
-    <out-dir>/collection_log.txt
-"""
 import argparse
 import json
 import os
