@@ -222,3 +222,8 @@ data/raw/
 data/processed/
 models/
 .venv/
+
+mlflow.db
+mlruns/
+models/
+confusion_matrix.png
