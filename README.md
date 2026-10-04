@@ -49,6 +49,7 @@ LinearSVC beats Logistic Regression by about 0.02 macro-F1, and adding the repos
 - **Got past GitHub's 100-page limit.** My first collector silently stopped at 2,000 to 5,000 issues per repo (HTTP 422). I rewrote it with the Search API and date windows to reach 8,000 per repo.
 - **Removed non-user traffic.** Bots and internal team items were a third of VS Code's issues and would have taught the wrong patterns.
 - **Exact label matching instead of keywords**, after finding that "Needs Decision - Include Feature" is not a feature request.
+- **Built a duplicate ground truth from two sources.** Comments alone revealed the original issue for only about 40% of duplicates. GitHub's GraphQL API records it when a maintainer uses "Close as duplicate", so combining both gave 699 usable pairs out of 857 duplicates.
 - **Experiments are tracked with MLflow**, with a repo-name ablation to check the models are not just recognizing the repository.
 
 ## Project status

@@ -60,7 +60,7 @@ Process labels such as `Needs Triage`, `stale`, `WIP` and `Closing Candidate` ar
 |---|---|---|---|
 | 14,702 | 9,486 | 4,327 | 686 |
 
-**Duplicates:** about 680 issues are closed with the reason "duplicate" (634 in VS Code, 22 in pandas, 14 in transformers, 13 in scikit-learn). They will be used to evaluate duplicate retrieval.
+**Duplicates:** 857 issues were closed as a duplicate or carry a duplicate label (638 VS Code, 191 pandas, 15 transformers, 13 scikit-learn). For each one I looked for the original issue, first in GitHub's own "closed as duplicate" record (GraphQL `ClosedEvent.duplicateOf`), then in comments such as "duplicate of #123". The original was found for **699 issues (82%)**: VS Code 535, pandas 138, scikit-learn 13, transformers 13. Pandas maintainers mostly state duplicates in comments, while VS Code, transformers and scikit-learn mostly use GitHub's button. Originals that were not already in the dataset (165) were downloaded so that retrieval can find them. These pairs evaluate duplicate retrieval, with two caveats: they are 77% VS Code, and the search corpus is smaller than each repository's full history, so recall@k is optimistic compared with a real deployment.
 
 ### Train / validation / test split
 
@@ -133,6 +133,7 @@ mlflow ui --backend-store-uri sqlite:///mlflow.db
 github-issue-triage/
 ├── src/
 │   ├── collect_issues.py     # GitHub Search API collector
+│   ├── build_duplicate_pairs.py  # finds the original issue for each duplicate
 │   ├── labels.py             # label mapping, filters, duplicate labels
 │   ├── preprocess.py         # text cleaning and creation-time features
 │   └── train_baseline.py     # TF-IDF baselines with MLflow tracking
