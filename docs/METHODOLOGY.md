@@ -132,17 +132,27 @@ mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
 github-issue-triage/
 ├── src/
-│   ├── collect_issues.py     # GitHub Search API collector
+│   ├── collect_issues.py         # GitHub Search API collector
 │   ├── build_duplicate_pairs.py  # finds the original issue for each duplicate
-│   ├── labels.py             # label mapping, filters, duplicate labels
-│   ├── preprocess.py         # text cleaning and creation-time features
-│   └── train_baseline.py     # TF-IDF baselines with MLflow tracking
+│   ├── labels.py                 # label mapping, filters, duplicate labels
+│   ├── preprocess.py             # text cleaning and creation-time features
+│   ├── train_baseline.py         # TF-IDF baselines with MLflow tracking
+│   └── exploration/              # one-off probes used to find where GitHub stores duplicate links
 ├── notebooks/
-│   ├── 01_eda.ipynb          # exploratory analysis
-│   ├── 02_labels.ipynb       # labels, filtering, priority, split
-│   └── 03_baselines.ipynb    # baseline results and error analysis
-├── docs/                     # figures
+│   ├── 01_eda.ipynb              # exploratory analysis
+│   ├── 02_labels.ipynb           # labels, filtering, priority, split
+│   ├── 03_text_cleaning.ipynb    # before/after check of the text cleaning
+│   └── 04_error_analysis.ipynb   # baseline error analysis and tag thresholds
+├── colab/
+│   ├── distilbert_issue_triage.ipynb  # DistilBERT for type and tags (Google Colab, T4 GPU)
+│   ├── duplicates_priority.ipynb      # duplicate retrieval, FAISS indexes, priority model
+│   └── push_to_hub.ipynb              # uploads the trained models to the Hugging Face Hub
+├── deploy/
+│   ├── api_space/                # FastAPI service + Dockerfile (Hugging Face Space)
+│   └── ui_space/                 # Streamlit demo (Hugging Face Space)
+├── docs/                         # methodology, error analysis, figures
 ├── requirements.txt
 └── README.md
 ```
+
 

@@ -30,7 +30,7 @@ An NLP system that triages GitHub issues: it predicts the **issue type**, sugges
 | TF-IDF + LinearSVC | 0.863 | 0.820 | 0.628 |
 | TF-IDF + Logistic Regression + repo name | 0.850 | 0.804 | 0.587 |
 | TF-IDF + LinearSVC + repo name | 0.865 | 0.822 | 0.635 |
-| DistilBERT (fine-tuned) | _planned_ | _planned_ | _planned_ |
+| DistilBERT (fine-tuned, 5 epochs) | 0.811 | 0.794 | 0.421 |
 
 **Tags (multi-label)**
 
@@ -38,9 +38,22 @@ An NLP system that triages GitHub issues: it predicts the **issue type**, sugges
 |---|---|---|---|
 | TF-IDF + One-vs-Rest Logistic Regression | 0.359 | 0.400 | 0.430 |
 | TF-IDF + One-vs-Rest LinearSVC | 0.372 | 0.400 | 0.425 |
-| DistilBERT multi-label | _planned_ | _planned_ | _planned_ |
+| DistilBERT multi-label (5 epochs) | 0.404 | 0.439 | 0.471 |
 
 LinearSVC beats Logistic Regression by about 0.02 macro-F1, and adding the repository name changes scores by less than 0.01. The `question` class is rare (10 test examples), so it is scored on validation and test combined. Tag prediction is much harder than issue type.
+
+**DistilBERT vs the baselines:** for issue type, DistilBERT matches the TF-IDF model on `bug`, `docs` and `feature` (test F1 0.98 / 0.94 / 0.95 vs 0.98 / 0.93 / 0.94) but is weaker on the rare `question` class, so the TF-IDF LinearSVC is used for issue type. For tags DistilBERT is better (test micro-F1 0.439 vs 0.400, better on 5 of 7 tags), so it is used for tags.
+
+**Duplicate retrieval.** For 636 issues closed as duplicates (699 pairs found, minus 63 whose original is newer than the duplicate), the system searches earlier issues of the same repository, as a real bot would (median pool: 5,424 candidates).
+
+| Method | recall@1 | recall@5 | recall@10 | MRR |
+|---|---|---|---|---|
+| TF-IDF cosine | 0.138 | 0.215 | 0.263 | 0.182 |
+| Sentence-BERT (all-MiniLM-L6-v2) | 0.239 | 0.436 | 0.531 | 0.338 |
+
+Sentence-BERT roughly doubles the baseline. Showing 10 suggestions finds the original about half the time. The pool is smaller than a repository's full history, so a real deployment would score lower.
+
+**Priority** (low / medium / high, an engagement proxy). XGBoost on the Sentence-BERT embedding plus creation-time features reaches test macro-F1 0.392, against 0.378 for metadata alone and 0.240 for always predicting "low". Accuracy (0.468) is below the trivial "always low" baseline (0.563) because the model is trained to balance the classes. Priority is therefore treated as an experimental score: predicting community engagement from the first post is hard. Used only as a ranking score it is weakly informative: AUC 0.62 for spotting the top 15% of issues by engagement, and a Spearman correlation of 0.21 with actual engagement.
 
 **Error analysis** ([details](docs/ERROR_ANALYSIS.md)): the issue-type baseline reaches 0.96 accuracy on the test set. Its mistakes are mostly docs and feature requests worded like bugs, and many sampled errors look like ambiguous maintainer labels. `question` is missed 7 times out of 10. The models partly learn issue-template wording and title prefixes, but accuracy drops only about one point on titles without a prefix. Per-tag threshold tuning did not improve the tag results, because tag frequencies shift over time.
 
@@ -59,9 +72,9 @@ LinearSVC beats Logistic Regression by about 0.02 macro-F1, and adding the repos
 - [x] Label mapping, filtering, priority label, time-based split
 - [x] Text cleaning and TF-IDF baselines (experiments tracked with MLflow)
 - [ ] Baseline error analysis
-- [ ] Fine-tuned DistilBERT for type and tags
-- [ ] Duplicate detection (Sentence-BERT + FAISS) and evaluation
-- [ ] Priority model
+- [x] Fine-tuned DistilBERT for type and tags
+- [x] Duplicate detection (Sentence-BERT + FAISS) and evaluation
+- [x] Priority model
 - [ ] FastAPI backend and Streamlit demo
 - [ ] Docker and deployment (Hugging Face Spaces)
 - [ ] GitHub Action bot that comments on new issues
