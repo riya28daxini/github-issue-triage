@@ -1,0 +1,9 @@
+{
+  "repository": {"full_name": "riya28daxini/github-issue-triage"},
+  "issue": {
+    "number": 1,
+    "title": "groupby with observed=False raises KeyError on categorical column",
+    "body": "### Reproducible Example\n```python\nimport pandas as pd\ndf = pd.DataFrame({'a': pd.Categorical(['x', 'y']), 'b': [1, 2]})\ndf.groupby('a', observed=False)['c'].sum()\n```\n### Issue Description\nKeyError: 'c' is raised, expected a clearer message.",
+    "user": {"type": "User", "login": "someone"}
+  }
+}

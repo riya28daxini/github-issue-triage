@@ -1,0 +1,47 @@
+name: Issue triage bot
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:                       # manual test run: prints the comment in the log, posts nothing
+    inputs:
+      title:
+        description: "Test issue title"
+        required: true
+        default: "groupby with observed=False raises KeyError on categorical column"
+      body:
+        description: "Test issue body"
+        required: false
+        default: "Traceback (most recent call last): KeyError: 'c' when calling groupby on a categorical column."
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  triage:
+    if: github.event_name == 'workflow_dispatch' || github.event.issue.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: deploy/streamlit_cloud/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r deploy/streamlit_cloud/requirements.txt
+
+      - name: Cache downloaded models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-models-v1
+
+      - name: Triage the issue
+        run: python bot/triage_bot.py        # reads the issue from the event file, never from the shell
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
