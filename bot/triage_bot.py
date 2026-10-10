@@ -23,6 +23,9 @@ from predictor import IssueTriage  # noqa: E402
 ARTIFACT_REPO = os.environ.get("ARTIFACT_REPO", "Riyaaa28/issue-triage-artifacts")
 API = "https://api.github.com"
 ZWSP = "\u200b"
+# Links go through redirect.github.com (the same trick Dependabot uses): a plain github.com issue link would add a
+# "mentioned this issue" entry to the timeline of every suggested issue in other projects.
+NO_BACKLINK = "https://redirect.github.com/"
 
 
 def load_issue():
@@ -55,7 +58,8 @@ def build_comment(res):
         lines += ["", "**Similar existing issues** (from scikit-learn, pandas, VS Code and Transformers, "
                       "the repositories this model was trained on):", ""]
         for h in res["similar_issues"]:
-            lines.append(f"- [{h['repo']}#{h['number']}]({h['url']}): {safe(h['title'])} (similarity {h['similarity']:.2f})")
+            link = h["url"].replace("https://github.com/", NO_BACKLINK, 1)
+            lines.append(f"- [{h['repo']} #{ZWSP}{h['number']}]({link}): {safe(h['title'])} (similarity {h['similarity']:.2f})")
     lines += ["", "<sub>Suggestions only, from [github-issue-triage](https://github.com/riya28daxini/github-issue-triage). "
                   "A maintainer makes the decision.</sub>"]
     return "\n".join(lines)
