@@ -54,8 +54,6 @@ Maintainer labels differ in every repository, so I mapped them to a shared schem
 
 Process labels such as `Needs Triage`, `stale`, `WIP` and `Closing Candidate` are deliberately excluded, because predicting them would not help a maintainer.
 
-**Priority** is a proxy, not an official maintainer label. For each issue I compute an engagement score from comments and reactions, rank it within its own repository, and bucket it: bottom 50% = low, next 35% = medium, top 15% = high. Only issues older than 14 days are scored, so recent issues are not unfairly rated low. Comments and reactions are used **only to build the label**, never as model inputs, because they accumulate after an issue is posted and would leak the answer.
-
 | low | medium | high | not scored (too recent) |
 |---|---|---|---|
 | 14,702 | 9,486 | 4,327 | 686 |
@@ -70,7 +68,6 @@ The split is **time-based within each repository** (oldest 70% train, next 15% v
 |---|---|---|---|
 | Issue-type set (14,878) | 9,499 | 2,897 | 2,482 |
 | Tag set (20,935) | 13,761 | 3,781 | 3,393 |
-| Priority set (28,515) | 20,439 | 4,381 | 3,695 |
 
 Issue-type classes per split:
 
@@ -89,7 +86,7 @@ Issue-type classes per split:
 - strips markdown symbols and caps the body at 4,000 characters
 - keeps error names found anywhere in the issue (for example `ValueError`, `KeyError`) as plain words, because they are strong bug signals
 
-It also computes features that are **available at the moment an issue is created**: `has_code_block`, `has_traceback`, `n_urls`, `n_error_names`, `title_len`, `body_len`. These are reserved for the priority model.
+It also computes features that are **available at the moment an issue is created**: `has_code_block`, `has_traceback`, `n_urls`, `n_error_names`, `title_len`, `body_len`. They are saved with the cleaned data but are not used by the final models.
 
 ## Baseline models
 
@@ -118,14 +115,12 @@ mlflow ui --backend-store-uri sqlite:///mlflow.db
 - **The `question` class is rare and drifting.** Maintainers now use that label much less, so the test set contains only 10 such issues. For this class I report scores on validation and test combined, and treat the number as indicative only.
 - **`docs` and `question` come almost entirely from pandas and scikit-learn.** The model may learn repo-specific habits. I test this with an ablation that includes or excludes the repo name as a feature.
 - **Labels are noisy.** They come from maintainers, are applied inconsistently, and about 40% of VS Code issues have no labels at all.
-- **Priority is a proxy** based on community engagement, not on a maintainer's judgment.
 
 ## Lessons learned while building the dataset
 
 1. **GitHub's list endpoint stops after about 100 pages.** My first collector silently ended at 2,000 to 5,000 issues per repository with an HTTP 422 error. I rewrote it to use the Search API with date windows (splitting any window with more than 1,000 results), which reached 8,000 per repository.
 2. **Real data contains non-user traffic.** Bots and internal team items made up a third of VS Code's issues, and would have taught the model the wrong patterns.
 3. **Exact label matching beats keyword matching** when label names are free text.
-4. **Leakage can hide in plain sight.** Engagement counts look like natural priority features, but they only exist after the issue has been discussed.
 
 ## Project structure
 
@@ -136,20 +131,19 @@ github-issue-triage/
 │   ├── build_duplicate_pairs.py  # finds the original issue for each duplicate
 │   ├── labels.py                 # label mapping, filters, duplicate labels
 │   ├── preprocess.py             # text cleaning and creation-time features
-│   ├── train_baseline.py         # TF-IDF baselines with MLflow tracking
-│   └── exploration/              # one-off probes used to find where GitHub stores duplicate links
+│   └── train_baseline.py         # TF-IDF baselines with MLflow tracking
 ├── notebooks/
 │   ├── 01_eda.ipynb              # exploratory analysis
-│   ├── 02_labels.ipynb           # labels, filtering, priority, split
+│   ├── 02_labels.ipynb           # labels, filtering, split
 │   ├── 03_text_cleaning.ipynb    # before/after check of the text cleaning
 │   └── 04_error_analysis.ipynb   # baseline error analysis and tag thresholds
 ├── colab/
 │   ├── distilbert_issue_triage.ipynb  # DistilBERT for type and tags (Google Colab, T4 GPU)
-│   ├── duplicates_priority.ipynb      # duplicate retrieval, FAISS indexes, priority model
+│   ├── duplicates.ipynb               # duplicate retrieval and FAISS indexes
 │   └── push_to_hub.ipynb              # uploads the trained models to the Hugging Face Hub
 ├── deploy/
-│   ├── api_space/                # FastAPI service + Dockerfile (Hugging Face Space)
-│   └── ui_space/                 # Streamlit demo (Hugging Face Space)
+│   ├── streamlit_cloud/          # the live demo (Streamlit Community Cloud)
+│   └── api_space/                # FastAPI service + Dockerfile
 ├── docs/                         # methodology, error analysis, figures
 ├── requirements.txt
 └── README.md

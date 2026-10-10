@@ -1,110 +1,104 @@
 # GitHub Issue Triage
 
-An NLP system that triages GitHub issues: it predicts the **issue type**, suggests **tags**, finds **likely duplicates** and estimates **priority**. Trained on 29,000+ real issues I collected from scikit-learn, pandas, VS Code and Hugging Face Transformers.
+An NLP system that reads a GitHub issue and predicts its **type** (bug / feature / docs / question), suggests **tags** (performance, regression, needs_info and more) and finds **similar existing issues**. It was trained on 29,201 real issues from scikit-learn, pandas, VS Code and Hugging Face Transformers.
 
-**Live demo: [open the app](https://app-issue-triage-hptj62dn5bryucgri55ufy.streamlit.app/)** (free hosting: the first load after a pause takes a minute or two)
+**[Try the live demo](https://app-issue-triage-hptj62dn5bryucgri55ufy.streamlit.app/)** (free hosting, so the first load can take a minute or two)
 
 ![Demo screenshot](docs/demo.png)
 
-> **Status:** complete: data pipeline, models, live demo and a GitHub Action bot.
-
 ## What it does
 
-| Output | Task | Approach |
-|---|---|---|
-| Issue type: bug / feature / docs / question | Multi-class classification | TF-IDF baselines vs fine-tuned DistilBERT |
-| Tags: performance, build_ci, api, regression, needs_info, needs_discussion, spam_invalid | Multi-label classification | One-vs-Rest baselines vs transformer head |
-| Similar existing issues | Semantic retrieval | Sentence-BERT + FAISS |
-| Priority: low / medium / high | Classification | XGBoost on features known at creation time |
+| Output | Model |
+|---|---|
+| Issue type | TF-IDF + LinearSVC |
+| Tags (multi-label) | Fine-tuned DistilBERT |
+| Similar issues | Sentence-BERT embeddings + FAISS search |
 
-## Data at a glance
-
-- **29,201 real user issues** (14,878 with a usable type label) after removing bots, Copilot and team-internal items
-- **Time-based split** per repository (oldest 70% train, next 15% validation, newest 15% test), so the model is always tested on future issues
-- Priority is a **proxy** built from comments and reactions, used only as a label and never as an input (no leakage)
-- Full details: [docs/METHODOLOGY.md](docs/METHODOLOGY.md)
-
-## Results so far
-
-**Issue type**
-
-| Model | Val macro-F1 | Test macro-F1 | Question F1 (val + test) |
-|---|---|---|---|
-| TF-IDF + Logistic Regression | 0.848 | 0.797 | 0.581 |
-| TF-IDF + LinearSVC | 0.863 | 0.820 | 0.628 |
-| TF-IDF + Logistic Regression + repo name | 0.850 | 0.804 | 0.587 |
-| TF-IDF + LinearSVC + repo name | 0.865 | 0.822 | 0.635 |
-| DistilBERT (fine-tuned, 5 epochs) | 0.811 | 0.794 | 0.421 |
-
-**Tags (multi-label)**
-
-| Model | Val micro-F1 | Test micro-F1 | Test macro-F1 |
-|---|---|---|---|
-| TF-IDF + One-vs-Rest Logistic Regression | 0.359 | 0.400 | 0.430 |
-| TF-IDF + One-vs-Rest LinearSVC | 0.372 | 0.400 | 0.425 |
-| DistilBERT multi-label (5 epochs) | 0.404 | 0.439 | 0.471 |
-
-LinearSVC beats Logistic Regression by about 0.02 macro-F1, and adding the repository name changes scores by less than 0.01. The `question` class is rare (10 test examples), so it is scored on validation and test combined. Tag prediction is much harder than issue type.
-
-**DistilBERT vs the baselines:** for issue type, DistilBERT matches the TF-IDF model on `bug`, `docs` and `feature` (test F1 0.98 / 0.94 / 0.95 vs 0.98 / 0.93 / 0.94) but is weaker on the rare `question` class, so the TF-IDF LinearSVC is used for issue type. For tags DistilBERT is better (test micro-F1 0.439 vs 0.400, better on 5 of 7 tags), so it is used for tags.
-
-**Duplicate retrieval.** For 636 issues closed as duplicates (699 pairs found, minus 63 whose original is newer than the duplicate), the system searches earlier issues of the same repository, as a real bot would (median pool: 5,424 candidates).
-
-| Method | recall@1 | recall@5 | recall@10 | MRR |
-|---|---|---|---|---|
-| TF-IDF cosine | 0.138 | 0.215 | 0.263 | 0.182 |
-| Sentence-BERT (all-MiniLM-L6-v2) | 0.239 | 0.436 | 0.531 | 0.338 |
-
-Sentence-BERT roughly doubles the baseline. Showing 10 suggestions finds the original about half the time. The pool is smaller than a repository's full history, so a real deployment would score lower.
-
-**Priority** (low / medium / high, an engagement proxy). XGBoost on the Sentence-BERT embedding plus creation-time features reaches test macro-F1 0.392, against 0.378 for metadata alone and 0.240 for always predicting "low". Accuracy (0.468) is below the trivial "always low" baseline (0.563) because the model is trained to balance the classes. Priority is therefore treated as an experimental score: predicting community engagement from the first post is hard. Used only as a ranking score it is weakly informative: AUC 0.62 for spotting the top 15% of issues by engagement, and a Spearman correlation of 0.21 with actual engagement.
-
-**Error analysis** ([details](docs/ERROR_ANALYSIS.md)): the issue-type baseline reaches 0.96 accuracy on the test set. Its mistakes are mostly docs and feature requests worded like bugs, and many sampled errors look like ambiguous maintainer labels. `question` is missed 7 times out of 10. The models partly learn issue-template wording and title prefixes, but accuracy drops only about one point on titles without a prefix. Per-tag threshold tuning did not improve the tag results, because tag frequencies shift over time.
-
-## Engineering decisions worth noting
-
-- **Got past GitHub's 100-page limit.** My first collector silently stopped at 2,000 to 5,000 issues per repo (HTTP 422). I rewrote it with the Search API and date windows to reach 8,000 per repo.
-- **Removed non-user traffic.** Bots and internal team items were a third of VS Code's issues and would have taught the wrong patterns.
-- **Exact label matching instead of keywords**, after finding that "Needs Decision - Include Feature" is not a feature request.
-- **Built a duplicate ground truth from two sources.** Comments alone revealed the original issue for only about 40% of duplicates. GitHub's GraphQL API records it when a maintainer uses "Close as duplicate", so combining both gave 699 usable pairs out of 857 duplicates.
-- **Experiments are tracked with MLflow**, with a repo-name ablation to check the models are not just recognizing the repository.
-
-## Try it
-
-- **Live:** the link at the top. Paste an issue (or a link to a public issue from scikit-learn, pandas, VS Code or Transformers) to see its type, tags, similar existing issues and an experimental attention level.
-- **Deployment note:** Hugging Face no longer offers free Docker Spaces, so the live demo runs on Streamlit Community Cloud (`deploy/streamlit_cloud`). The FastAPI + Docker version (`deploy/api_space`) is included and was tested locally.
-- **Run it yourself:** `pip install -r deploy/streamlit_cloud/requirements.txt`, then `streamlit run deploy/streamlit_cloud/app.py`. The models download automatically from the Hugging Face Hub (`Riyaaa28/issue-triage-artifacts`).
-
-## The bot
-
-A GitHub Action (`.github/workflows/triage.yml`) runs the same models whenever an issue is opened in this repository. It comments with the predicted type and tags, similar existing issues and an experimental attention level, and adds labels. It runs inside the Actions runner, so no server is needed.
+It also runs as a **GitHub Action**: when someone opens an issue in this repository, the bot comments with the same predictions and adds a label.
 
 ![Bot comment](docs/bot_comment.png)
 
-It skips issues opened by bots, reads the issue from GitHub's event file instead of the shell, and neutralizes `@mentions` in the suggested titles.
+## How I built it
 
-## Quick start
+1. **Collected** 32,000 issues (8,000 per repository) with the GitHub Search API, using date windows to get past the API's 100-page limit.
+2. **Cleaned and labelled** them: removed bots and team-internal items (29,201 real issues remain), mapped maintainers' labels to 4 types and 7 tags with exact matching, and split each repository by time (oldest 70% train, next 15% validation, newest 15% test).
+3. **Trained** TF-IDF baselines first, then fine-tuned DistilBERT on a free Colab GPU, and kept the better model for each task.
+4. **Built duplicate ground truth** from issues that maintainers closed as duplicates (857 found, 699 with a known original), then measured how often the search finds the original.
+5. **Deployed** the models on the Hugging Face Hub, a Streamlit app and the GitHub Action bot.
+
+## Results
+
+All scores are on the test set: the newest issues of each repository, which the models never saw.
+
+**Issue type** (4 classes)
+
+| Model | Test macro-F1 | Accuracy | `question` F1 |
+|---|---|---|---|
+| TF-IDF + Logistic Regression | 0.797 | | 0.581 |
+| **TF-IDF + LinearSVC** (used) | **0.820** | 0.96 | 0.628 |
+| DistilBERT (5 epochs) | 0.794 | | 0.421 |
+
+**Tags** (7 labels, multi-label)
+
+| Model | Test micro-F1 | Test macro-F1 |
+|---|---|---|
+| TF-IDF + Logistic Regression | 0.400 | 0.430 |
+| **DistilBERT** (used) | **0.439** | **0.471** |
+
+**Duplicate search** (636 duplicates, original searched among earlier issues of the same repository)
+
+| Method | recall@1 | recall@5 | recall@10 | MRR |
+|---|---|---|---|---|
+| TF-IDF | 0.138 | 0.215 | 0.263 | 0.182 |
+| **Sentence-BERT** (used) | **0.239** | **0.436** | **0.531** | **0.338** |
+
+What the numbers say:
+- For issue type, a simple TF-IDF model beat the fine-tuned DistilBERT. They are equal on bug, docs and feature; the gap comes mostly from the rare `question` class (only 10 test examples), so I used the simpler model.
+- DistilBERT is better for tags (5 of 7 tags), so each task uses the model that scored better.
+- Sentence-BERT roughly doubles TF-IDF for duplicate search. The original appears in the top 10 suggestions for 53% of duplicates.
+
+Full tables, per-class scores and error analysis: [docs/RESULTS.md](docs/RESULTS.md), [docs/ERROR_ANALYSIS.md](docs/ERROR_ANALYSIS.md). Data and label details: [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
+
+## Limitations
+
+- Labels come from maintainers and are noisy, so the scores partly measure how consistently they labelled.
+- `question` is rare and weak, and tag prediction is hard (best micro-F1 0.44).
+- Only four Python and developer-tool repositories were used, and 77% of the duplicate test pairs are from VS Code. It is not tested on other projects.
+
+## Run it
 
 ```bash
 git clone https://github.com/riya28daxini/github-issue-triage.git
 cd github-issue-triage
-python -m venv .venv
-# Windows: .venv\Scripts\Activate.ps1      Mac/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-
-python src/collect_issues.py --max-per-repo 8000 --out-dir data/raw   # needs a GITHUB_TOKEN environment variable
-# run notebooks/02_labels.ipynb (Restart & Run All)
-python src/preprocess.py
-python src/train_baseline.py --task type --model svm
-mlflow ui --backend-store-uri sqlite:///mlflow.db
+pip install -r deploy/streamlit_cloud/requirements.txt
+streamlit run deploy/streamlit_cloud/app.py
 ```
 
-Data files are not stored in the repository; the collector recreates them.
+The models download from the Hugging Face Hub (`Riyaaa28/issue-triage-artifacts`) the first time.
 
-## Tech stack
+To rebuild the data and baselines (needs a `GITHUB_TOKEN`):
 
-Python, pandas, scikit-learn, MLflow, PyTorch and Hugging Face Transformers, Sentence-Transformers, FAISS, XGBoost, FastAPI, Streamlit, Docker.
+```bash
+pip install -r requirements.txt
+python src/collect_issues.py --max-per-repo 8000 --out-dir data/raw
+# run notebooks/02_labels.ipynb, then:
+python src/preprocess.py
+python src/train_baseline.py --task type --model svm
+```
 
-## Author
+DistilBERT and the duplicate search are trained in the notebooks in `colab/` on a free Colab GPU.
+
+## Project layout
+
+```
+src/         data collection, label mapping, text cleaning, TF-IDF baselines, duplicate pairs
+notebooks/   EDA, labels, text cleaning, error analysis
+colab/       DistilBERT training, duplicate search, upload to the Hugging Face Hub
+deploy/      Streamlit app (live demo) and a FastAPI + Docker version
+bot/         GitHub Action bot
+docs/        results, methodology, error analysis, screenshots
+```
+
+**Built with:** Python, pandas, scikit-learn, PyTorch, Hugging Face Transformers, Sentence-Transformers, FAISS, MLflow, Streamlit, FastAPI, GitHub Actions.
 
 **Riya**, B.Tech Computer Engineering, Nirma University | [LinkedIn](https://www.linkedin.com/in/riya-daxini-623627377) | [GitHub](https://github.com/riya28daxini)

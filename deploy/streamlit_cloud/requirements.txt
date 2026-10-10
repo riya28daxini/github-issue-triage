@@ -3,7 +3,6 @@ torch
 transformers
 sentence-transformers
 faiss-cpu
-xgboost==3.2.0
 scikit-learn==1.9.1
 joblib
 pandas

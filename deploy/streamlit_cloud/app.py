@@ -36,7 +36,7 @@ EXAMPLES = {
 
 st.set_page_config(page_title="GitHub Issue Triage", page_icon="🧭", layout="wide")
 st.title("🧭 GitHub Issue Triage")
-st.caption("Predicts the issue type and tags, finds similar existing issues, and estimates the attention an issue may get. "
+st.caption("Predicts the issue type and tags, and finds similar existing issues. "
            "Trained on 29,000+ issues from scikit-learn, pandas, VS Code and Hugging Face Transformers.")
 
 
@@ -85,11 +85,6 @@ def show(res):
         else:
             st.dataframe(sims[["repo", "number", "title", "similarity", "url"]], hide_index=True, width="stretch",
                          column_config={"url": st.column_config.LinkColumn("Open", display_text="open")})
-        st.subheader("Estimated attention level (experimental)")
-        att = res["attention_level"]
-        st.info(att["label"].upper())
-        st.bar_chart(pd.Series(att["probabilities"]))
-        st.caption(att["note"])
 
 
 tab_text, tab_url = st.tabs(["Paste an issue", "From a GitHub link"])
@@ -119,6 +114,5 @@ with tab_url:
             show(res)
 
 st.divider()
-st.caption("Attention level is an experimental proxy for comments and reactions, not an official priority. "
-           "Similar-issue search covers the four repositories in the training data. "
+st.caption("Similar-issue search covers the four repositories in the training data. "
            "[Source code and write-up on GitHub](https://github.com/riya28daxini/github-issue-triage)")

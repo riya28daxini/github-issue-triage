@@ -54,7 +54,7 @@ def extract_from_text(text, own_number):
 def make_session():
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
-        raise SystemExit("GITHUB_TOKEN not set (see the setup note at the top of probe_duplicates.py).")
+        raise SystemExit("GITHUB_TOKEN not set (see the setup note at the top of collect_issues.py).")
     s = requests.Session()
     s.headers.update({"Authorization": f"Bearer {token}",
                       "Accept": "application/vnd.github+json",

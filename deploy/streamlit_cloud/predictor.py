@@ -5,7 +5,6 @@ Loads every model from one Hugging Face Hub repository and, for a new issue, ret
   - issue type      (TF-IDF + LinearSVC)
   - tags            (fine-tuned DistilBERT, multi-label)
   - similar issues  (Sentence-BERT + FAISS, one index per repository)
-  - attention level (XGBoost; an experimental proxy for community engagement)
 """
 import json
 import os
@@ -19,8 +18,6 @@ import requests
 
 from preprocess import clean_issue
 
-ATTENTION_NOTE = ("Experimental: estimates how much community attention an issue may get "
-                  "(comments and reactions), not an official maintainer priority.")
 ISSUE_URL = re.compile(r"github\.com/([\w.-]+)/([\w.-]+)/issues/(\d+)")
 
 
@@ -64,17 +61,13 @@ class IssueTriage:
 
         self.type_vec, self.type_clf = joblib.load(d / "type_tfidf_svm.joblib")
 
-        import xgboost as xgb
-        self.prio_cfg = json.load(open(d / "priority_config.json"))
-        self.prio = xgb.XGBClassifier()
-        self.prio.load_model(str(d / "priority_xgb.json"))
-
         import faiss
         self.meta = pd.read_parquet(d / "corpus_meta_slim.parquet")
         self.indexes = {}
-        for repo in self.prio_cfg["repo_cats"]:
-            name = repo.replace("/", "__")
-            self.indexes[repo] = (faiss.read_index(str(d / f"faiss_{name}.index")), np.load(d / f"faiss_{name}_rows.npy"))
+        for index_file in sorted(d.glob("faiss_*.index")):       # one index per repository, e.g. faiss_pandas-dev__pandas.index
+            name = index_file.stem[len("faiss_"):]
+            repo = name.replace("__", "/")
+            self.indexes[repo] = (faiss.read_index(str(index_file)), np.load(d / f"faiss_{name}_rows.npy"))
 
         if load_models:
             self._load_heavy(d)
@@ -120,20 +113,6 @@ class IssueTriage:
                              "url": f"https://github.com/{row['repo']}/issues/{int(row['number'])}"})
         return sorted(hits, key=lambda h: -h["similarity"])[:top_k]
 
-    def _attention(self, feats, emb, repo):
-        cfg = self.prio_cfg
-        assoc = cfg["assoc_cats"].index("NONE") if "NONE" in cfg["assoc_cats"] else -1
-        repo_code = cfg["repo_cats"].index(repo) if repo in cfg["repo_cats"] else -1
-        x = [float(feats[c]) for c in cfg["meta_cols"]] + [float(assoc), float(repo_code)]
-        x = np.array(x, dtype=float)
-        if cfg["uses_embeddings"]:
-            x = np.concatenate([x, emb.astype(float)])
-        proba = self.prio.predict_proba(x[None, :])[0]
-        levels = cfg["levels"]
-        return {"label": levels[int(np.argmax(proba))],
-                "probabilities": {l: round(float(p), 3) for l, p in zip(levels, proba)},
-                "note": ATTENTION_NOTE}
-
     def predict(self, title, body="", repo=None, top_k=5, exclude=None):
         c = clean_issue(title, body)
         text = c["text_clean"]
@@ -153,6 +132,5 @@ class IssueTriage:
                      "probabilities": {t: round(float(p), 3) for t, p in zip(self.tags, tag_probs)},
                      "model": "DistilBERT multi-label"},
             "similar_issues": self._similar(emb, repo, top_k, exclude),
-            "attention_level": self._attention(c, emb, repo),
             "searched_repo": repo if repo in self.indexes else "all supported repositories",
         }

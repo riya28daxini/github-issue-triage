@@ -45,11 +45,9 @@ def safe(text, limit=110):
 
 def build_comment(res):
     tags = res["tags"]["predicted"]
-    att = res["attention_level"]
     lines = ["### 🧭 Automated issue triage (experimental)", "",
              f"**Issue type:** `{res['issue_type']['label']}`",
-             "**Tags:** " + (" ".join(f"`{t}`" for t in tags) if tags else "none above 50% confidence"),
-             f"**Estimated attention level:** `{att['label']}` _(an experimental proxy for comments and reactions)_"]
+             "**Tags:** " + (" ".join(f"`{t}`" for t in tags) if tags else "none above 50% confidence")]
     if res["similar_issues"]:
         lines += ["", "**Similar existing issues** (from scikit-learn, pandas, VS Code and Transformers, "
                       "the repositories this model was trained on):", ""]

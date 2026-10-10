@@ -19,7 +19,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title="GitHub Issue Triage", version="1.0", lifespan=lifespan,
-              description="Predicts issue type, tags, similar issues and an experimental attention level.")
+              description="Predicts issue type, tags, and similar issues.")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 

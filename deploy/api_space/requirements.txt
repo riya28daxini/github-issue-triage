@@ -7,7 +7,6 @@ pandas
 pyarrow
 scikit-learn
 joblib
-xgboost
 faiss-cpu
 huggingface_hub
 transformers
