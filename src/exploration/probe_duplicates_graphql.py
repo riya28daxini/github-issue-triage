@@ -1,17 +1,4 @@
-"""
-Probe 2: does GitHub's GraphQL API tell us which issue a "closed as duplicate" issue points to?
 
-The REST API did not show it (most missed issues had no comment about duplicates). GraphQL has
-extra fields on timeline events that might. I have NOT run this against GitHub, so the first run
-is also a test: if a field name is wrong, the script prints GitHub's error message instead of crashing.
-
-Setup: same secure token setup as probe_duplicates.py (see the header of that file).
-
-Run from the project root, after probe_duplicates.py has created data/processed/duplicate_probe.csv:
-    python src/probe_duplicates_graphql.py
-
-Output: printed summary + data/processed/duplicate_probe_graphql.csv
-"""
 import json
 import os
 import time

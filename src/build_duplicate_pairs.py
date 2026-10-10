@@ -1,22 +1,4 @@
-"""
-Build the duplicate ground truth: for every issue that was closed as a duplicate, find the ORIGINAL issue.
 
-Sources, in this order:
-  1. GitHub GraphQL: ClosedEvent.duplicateOf / MarkedAsDuplicateEvent.canonical
-     (this is what the "Close as duplicate" button records; works for VS Code, transformers, scikit-learn)
-  2. A comment such as "duplicate of #123"  (needed for pandas, which uses comments)
-Then it downloads the original issues that are not in our dataset yet, so retrieval can find them.
-
-Setup: secure token setup from the header of probe_duplicates.py (the token is never typed into a command).
-
-Run from the project root (about 20 to 30 minutes; safe to stop and restart, progress is saved):
-    python src/build_duplicate_pairs.py
-
-Outputs (in data/processed/):
-    duplicate_raw.jsonl     one line per duplicate issue checked (progress file)
-    duplicate_pairs.csv     repo, number (the duplicate), target (the original), method
-    extra_corpus.jsonl      original issues that were not in issues_all.parquet
-"""
 import json
 import os
 import re

@@ -4,10 +4,6 @@ GitHub Action bot: comments on a newly opened issue with the predicted type, tag
 It runs inside the GitHub Actions runner (free for public repositories), so no server is needed.
 The models are downloaded from the Hugging Face Hub (Riyaaa28/issue-triage-artifacts).
 
-Local dry run (prints the comment, posts nothing):
-    $env:GITHUB_EVENT_PATH = "bot/sample_event.json"
-    $env:DRY_RUN = "1"
-    python bot/triage_bot.py
 """
 import json
 import os

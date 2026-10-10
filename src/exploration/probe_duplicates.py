@@ -1,18 +1,4 @@
-"""
-Probe: can we find WHICH issue each "closed as duplicate" issue points to?
 
-This is a small experiment (about 15 issues per repo, ~120 API calls). It does NOT build the
-final ground truth; it only tells us how reliable the extraction would be.
-
-Setup (PowerShell, token is not stored in history):
-    $s = Read-Host "Paste token" -AsSecureString
-    $env:GITHUB_TOKEN = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-
-Run from the project root:
-    python src/probe_duplicates.py --per-repo 15
-
-Output: printed summary + data/processed/duplicate_probe.csv
-"""
 import argparse
 import json
 import os

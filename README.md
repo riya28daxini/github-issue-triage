@@ -2,7 +2,11 @@
 
 An NLP system that triages GitHub issues: it predicts the **issue type**, suggests **tags**, finds **likely duplicates** and estimates **priority**. Trained on 29,000+ real issues I collected from scikit-learn, pandas, VS Code and Hugging Face Transformers.
 
-> **Status: in progress** (data, labels and TF-IDF baselines done; transformers, duplicate search, API and deployment next). **Live demo:** _coming soon_
+**Live demo: [open the app](https://app-issue-triage-hptj62dn5bryucgri55ufy.streamlit.app/)** (free hosting: the first load after a pause takes a minute or two)
+
+![Demo screenshot](docs/demo.png)
+
+> **Status:** complete: data pipeline, models, live demo and a GitHub Action bot.
 
 ## What it does
 
@@ -65,20 +69,19 @@ Sentence-BERT roughly doubles the baseline. Showing 10 suggestions finds the ori
 - **Built a duplicate ground truth from two sources.** Comments alone revealed the original issue for only about 40% of duplicates. GitHub's GraphQL API records it when a maintainer uses "Close as duplicate", so combining both gave 699 usable pairs out of 857 duplicates.
 - **Experiments are tracked with MLflow**, with a repo-name ablation to check the models are not just recognizing the repository.
 
-## Project status
+## Try it
 
-- [x] Data collection (32,000 issues from 4 repositories)
-- [x] Exploratory data analysis
-- [x] Label mapping, filtering, priority label, time-based split
-- [x] Text cleaning and TF-IDF baselines (experiments tracked with MLflow)
-- [ ] Baseline error analysis
-- [x] Fine-tuned DistilBERT for type and tags
-- [x] Duplicate detection (Sentence-BERT + FAISS) and evaluation
-- [x] Priority model
-- [ ] FastAPI backend and Streamlit demo
-- [ ] Docker and deployment (Hugging Face Spaces)
-- [ ] GitHub Action bot that comments on new issues
-- [ ] Error analysis and final write-up
+- **Live:** the link at the top. Paste an issue (or a link to a public issue from scikit-learn, pandas, VS Code or Transformers) to see its type, tags, similar existing issues and an experimental attention level.
+- **Deployment note:** Hugging Face no longer offers free Docker Spaces, so the live demo runs on Streamlit Community Cloud (`deploy/streamlit_cloud`). The FastAPI + Docker version (`deploy/api_space`) is included and was tested locally.
+- **Run it yourself:** `pip install -r deploy/streamlit_cloud/requirements.txt`, then `streamlit run deploy/streamlit_cloud/app.py`. The models download automatically from the Hugging Face Hub (`Riyaaa28/issue-triage-artifacts`).
+
+## The bot
+
+A GitHub Action (`.github/workflows/triage.yml`) runs the same models whenever an issue is opened in this repository. It comments with the predicted type and tags, similar existing issues and an experimental attention level, and adds labels. It runs inside the Actions runner, so no server is needed.
+
+![Bot comment](docs/bot_comment.png)
+
+It skips issues opened by bots, reads the issue from GitHub's event file instead of the shell, and neutralizes `@mentions` in the suggested titles.
 
 ## Quick start
 
@@ -104,4 +107,4 @@ Python, pandas, scikit-learn, MLflow, PyTorch and Hugging Face Transformers, Sen
 
 ## Author
 
-**Riya**, B.Tech Computer Engineering, Nirma University | [LinkedIn](#) | [GitHub](https://github.com/riya28daxini)
+**Riya**, B.Tech Computer Engineering, Nirma University | [LinkedIn](https://www.linkedin.com/in/riya-daxini-623627377) | [GitHub](https://github.com/riya28daxini)
