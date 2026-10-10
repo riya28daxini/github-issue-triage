@@ -32,11 +32,13 @@ All scores are on the test set: the newest issues of each repository, which the 
 
 **Issue type** (4 classes)
 
-| Model | Test macro-F1 | Accuracy | `question` F1 |
-|---|---|---|---|
-| TF-IDF + Logistic Regression | 0.797 | | 0.581 |
-| **TF-IDF + LinearSVC** (used) | **0.820** | 0.96 | 0.628 |
-| DistilBERT (5 epochs) | 0.794 | | 0.421 |
+| Model | Test macro-F1 | `question` F1 |
+|---|---|---|
+| TF-IDF + Logistic Regression | 0.797 | 0.581 |
+| **TF-IDF + LinearSVC** (used) | **0.820** | 0.628 |
+| DistilBERT (5 epochs) | 0.794 | 0.421 |
+
+The LinearSVC reaches 0.96 accuracy on the test set. `question` F1 is measured on validation and test combined, because the test set has only 10 questions.
 
 **Tags** (7 labels, multi-label)
 
