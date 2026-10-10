@@ -18,7 +18,6 @@ OUT_PATH = Path("data/processed/issues_clean.parquet")
 
 HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)          # issue-template instructions
 CODE_BLOCK = re.compile(r"```.*?```", re.S)
-HTML_TAG = re.compile(r"</?[A-Za-z][^<>]{0,400}>")          # <img ...>, <details>, <br/> left over from templates
 IMAGE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
 MD_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
 URL = re.compile(r"https?://\S+")
@@ -47,7 +46,6 @@ def clean_issue(title, body):
 
     text = IMAGE.sub(" IMAGE ", body)
     text = CODE_BLOCK.sub(" CODEBLOCK ", text)
-    text = HTML_TAG.sub(" ", text)
     text = MD_LINK.sub(r"\1", text)
     text = URL.sub(" URL ", text)
     text = MENTION.sub(" USER ", text)
